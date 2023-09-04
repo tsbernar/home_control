@@ -1,0 +1,53 @@
+import {VerticalBox , HorizontalBox, Slider} from "std-widgets.slint";
+import {NavBar} from "./navbar.slint";
+import {Keypad} from "./keypad.slint";
+import {ACControl} from "./ac.slint";
+import { Settings } from "settings.slint";
+
+export component AppWindow inherits Window {
+    preferred-width: 480px;
+    preferred-height: 320px;
+    background: black;
+    in-out property<int> temp <=> ac.temp;
+    out property <bool> ac-enabled <=> nav.ac-enabled;
+    out property <bool> show-auto-pilot-settings <=> ac.show-auto;
+    out property <bool> settings-enabled <=> nav.settings-enabled;
+    callback request-increase-value();
+    in-out property <bool> sleep: true;
+
+    
+
+    VerticalBox {
+            nav := NavBar {
+                visible: !sleep;
+                ac-clicked => {
+                    self.ac-enabled = true;
+                    self.settings-enabled = false;
+                    root.show-auto-pilot-settings = false;
+                    root.sleep = false;
+                }
+                alarm-clicked => {
+                    self.ac-enabled = false;
+                    self.settings-enabled = false;
+                    root.sleep = false;
+                }
+                settings-clicked => {
+                    self.settings-enabled = true;
+                }
+            }
+            Rectangle {
+                keypad := Keypad {x: (!ac-enabled && !sleep)? 0 : self.width + 1px;}
+                settings := Settings {x: (settings-enabled && !sleep)? 0 : self.width + 10px;}
+                ac := ACControl {x: (ac-enabled || sleep)? 0 : - self.width - 1px; sleep: sleep;}
+            }
+    }
+
+    if sleep: TouchArea {
+        height: parent.height;
+        width: parent.width;
+        clicked => {
+            root.ac-enabled = true;
+            root.sleep = false;
+        }
+    }
+}

@@ -1,0 +1,45 @@
+export component Keypad inherits Rectangle{
+    animate x { duration: 200ms; easing: ease-in-out; }
+    callback key_pressed(int);
+
+    Rectangle {
+
+        width: 80%;
+        x: parent.width * 0.1;
+        for i in 10 : Rectangle {
+            property <int> num: mod(i +1, 10);
+            callback clicked;
+
+            width: 29%;
+            height: 23%;            
+            border-width: 1px;
+            border-radius: self.width*0.02;
+            x: num==0 ? 0.365*parent.width : (mod(i, 3) * 0.3 + 0.065) * parent.width;
+            y: (floor(i / 3) * 0.25 ) * parent.height;
+
+
+            border-color: touch.pressed? white: #292929;
+            animate border-color { duration: 200ms; }
+
+            Text {
+                color: white;
+                text: num;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                font-size: 2rem;
+            }
+
+            touch := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => {
+                    debug(num, "pressed");
+                    root.key_pressed(num);
+                }
+            }
+
+
+        }
+    }
+
+ }

@@ -1,0 +1,89 @@
+
+import { Button, VerticalBox , HorizontalBox} from "std-widgets.slint";
+
+export component NavBar inherits HorizontalLayout {
+    in property <bool> sleep;
+    in-out property <bool> ac-enabled;
+    in-out property <bool> settings-enabled;
+    callback ac_clicked;
+    callback alarm_clicked;
+    callback settings_clicked;
+
+    height: 20%;
+
+    // Spacer
+    Rectangle {
+        width: parent.width * 15%;
+    }
+
+    HorizontalLayout {
+        padding: 0;
+        spacing: 25px;
+        alignment: center;
+
+        Rectangle {
+            width: 30%;
+            border-width: 1px;
+            border-color: ac-enabled ? white: #292929;
+            border-radius: self.width*0.05;
+            
+            Text {
+                text: "A/C";
+                font-size: 18px;
+                color: white;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        
+            t_ac := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => {
+                    debug("ac clicked");
+                    root.ac_clicked()
+                }
+            }
+        }
+
+        Rectangle {
+            width: 30%;
+            border-width: 1px;
+            border-color: !ac-enabled ? white: #292929;
+            border-radius: self.width*0.05;
+            Image {
+                source: @image-url("icons/bell-regular.svg");
+                colorize: white;
+                height: 18px;
+            }
+
+            t_alarm := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => {
+                    debug("alarm clicked");
+                    root.alarm_clicked()
+                }
+            }
+        }
+    }
+    Rectangle {
+        width: parent.width * 15%;
+        VerticalBox {
+            alignment: center;
+            Text {
+                horizontal-alignment: center;
+                text: "⚙";
+                font-size: 3rem;
+                color: white;
+            }
+        }
+        t_settings := TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => {
+                debug("settings clicked");
+                root.settings_clicked()
+            }
+        }
+    }
+}

@@ -1,0 +1,12 @@
+import { GroupBox, CheckBox } from "std-widgets.slint";
+export component Settings inherits Rectangle { 
+    border-color: white;
+    border-width: 1px;
+    GroupBox {
+        title: "Groceries";
+        VerticalLayout {
+            CheckBox { text: "Bread"; checked: true ;}
+            CheckBox { text: "Fruits"; }
+        }
+    }
+}

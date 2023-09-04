@@ -1,0 +1,344 @@
+import {HorizontalBox, VerticalBox} from "std-widgets.slint";
+
+export enum AutoPilotMode { On, Off, Snooze }
+export struct AutoPilotSetting {
+    mode: AutoPilotMode,
+    snooze-minutes: int,
+}
+
+component TempDisplay inherits Rectangle {
+    in property <int> temp;
+    in property <string> auto-pilot-display;
+    callback clicked();
+
+    width: 10px;
+    height: self.width;
+    border-radius: self.width/2;
+    //border-width: 1px;
+    border-color: white;
+    VerticalBox {
+        alignment: center;
+        Text {
+            horizontal-alignment: center;
+            text: temp;
+            color: white;
+            font-size: 7rem;
+            font-weight: 100;
+        }
+        Text {
+            horizontal-alignment: center;
+            text: auto-pilot-display;
+            font-size: 1.2rem;
+            color: white;
+        }
+    }
+
+    touch := TouchArea {
+        width: parent.width;
+        height: parent.height;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component TempControl inherits Rectangle {
+    in property <string> mode;
+    callback key_pressed(string);
+
+    width: 10px;
+    height: self.width;
+    border-radius: self.width/2;
+    border-width: 1px;
+    border-color: touch.pressed ? white : #393939;
+    animate border-color { duration: 200ms; }
+
+    Text {
+        text: mode == "increment" ? "+" : "-";
+        font-size: 2rem;
+        font-weight: 100;
+        color: white;
+    }
+    touch := TouchArea {
+        width: parent.width;
+        height: parent.height;
+        clicked => {
+            debug(mode, "pressed");
+            root.key_pressed(mode);
+        }
+    }
+}
+
+export component TempReadingDisplay inherits VerticalBox {
+    in property <string> location;
+    in property <int> temp;
+    alignment: center;
+    Text {
+        horizontal-alignment: center;
+        color: white;
+        text: location;
+        font-size: 1.5rem;
+    }
+    Text {
+        horizontal-alignment: center;
+        color: white;
+        text: temp + "°";
+        font-size: 1.5rem;
+    }
+ }
+
+
+ export component AutoPilotModeButton inherits Rectangle{
+    callback clicked();
+    in property <string> mode;
+    border-width: 1px;
+    border-radius: self.width*0.05;
+    border-color: touch.pressed ? white : #393939;
+
+    Text {text: mode; color: white; font-size: 1.2rem;}
+
+    touch := TouchArea {
+        height: parent.height;
+        width: parent.width;
+        clicked => {
+            root.clicked()
+        }
+    }
+  }
+
+ export component AutoPilotModeButtons inherits HorizontalBox { 
+    in-out property <AutoPilotSetting> auto-pilot-settings;
+    alignment: center;
+    AutoPilotModeButton{
+        width: root.width * 25%;
+        height: self.width / 2;
+        mode: "Auto Pilot";
+        clicked => {
+            root.auto-pilot-settings.mode = AutoPilotMode.On;
+            root.auto-pilot-settings.snooze-minutes = 0;
+        }
+    }
+    AutoPilotModeButton{
+        width: root.width * 25%;
+        height: self.width / 2;
+        mode: "Snooze";
+        clicked => {
+            root.auto-pilot-settings.mode = AutoPilotMode.Snooze;
+            root.auto-pilot-settings.snooze-minutes = 30;
+        }
+    }
+    AutoPilotModeButton{
+        width: root.width * 25%;
+        height: self.width / 2;
+        mode: "Manual";
+        clicked => {
+            root.auto-pilot-settings.mode = AutoPilotMode.Off;
+            root.auto-pilot-settings.snooze-minutes = 0;
+        }
+    }
+ }
+
+ export component AutoPilotSettings inherits Rectangle {
+    in-out property <AutoPilotSetting> auto-pilot-settings <=> mode_buttons.auto-pilot-settings;
+    in property <string> auto-pilot-display;
+    callback back();
+    Rectangle {
+        y: -23% *root.height;
+        x: 0;
+        border-width: 1px;
+        height: 20%;
+        width: 20%;
+        border-radius: self.width*0.05;
+
+        Text {text: "⬅"; color: white; font-size: 2rem;}
+
+        touch := TouchArea {
+            height: parent.height;
+            width: parent.width;
+            clicked => {
+                root.back()
+            }
+        }
+    }
+    VerticalBox {
+        alignment: center;
+        HorizontalBox {
+            alignment: center;
+            VerticalBox {
+                alignment: center;
+                TempControl {
+                    mode: "decrement";
+                    width: root.width * 10%;
+                    key-pressed(mode) => {
+                        if (root.auto-pilot-settings.mode == AutoPilotMode.Off) {
+                            // Manual mode, don't do anything
+                            
+                        }
+                        if (root.auto-pilot-settings.snooze-minutes > 60) {
+                            root.auto-pilot-settings.snooze-minutes -= 60;
+                        }
+                        else {
+                            root.auto-pilot-settings.snooze-minutes -=  min(root.auto-pilot-settings.snooze-minutes, 30);
+                        }
+                        if (root.auto-pilot-settings.snooze-minutes == 0) {
+                            root.auto-pilot-settings.mode = AutoPilotMode.On;
+                        }
+                    }
+                }
+            }
+            VerticalBox {
+                alignment: center;
+                Text {
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    text: auto-pilot-settings.mode == AutoPilotMode.Snooze? "Snoozed" : "";
+                    color: white;
+                }
+                Text {
+                    width: root.width * 25%;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    text: auto-pilot-display; 
+                    color: white;
+                }
+            }
+            VerticalBox {
+                alignment: center;
+                TempControl {
+                    mode: "increment";
+                    width: root.width * 10%;
+                    key-pressed(mode) => {
+                        if (!(root.auto-pilot-settings.mode == AutoPilotMode.Snooze)) {
+                            root.auto-pilot-settings.mode = AutoPilotMode.Snooze;
+                            root.auto-pilot-settings.snooze-minutes = 0;
+                        }
+                        if (root.auto-pilot-settings.snooze-minutes < 60) {
+                            root.auto-pilot-settings.snooze-minutes += 30;
+                        }
+                        else {
+                            root.auto-pilot-settings.snooze-minutes += 60;
+                        }
+                    }
+                }
+            }
+        }
+        VerticalBox {
+            alignment: end;
+            mode_buttons := AutoPilotModeButtons {}
+        }
+    }
+ }
+
+ export component TempSettings inherits Rectangle {
+    callback changed();
+    in property <string> auto-pilot-display;
+    in property <bool> sleep;
+    in-out property <int> temp;
+    in-out property <bool> show-auto;
+    Rectangle {
+        y:0;
+        height: parent.height*0.7;
+        HorizontalBox {
+            alignment: center;
+            spacing: self.width*0.15;
+            VerticalLayout {
+                visible: !sleep;
+                alignment: center;
+                TempControl { 
+                    width: root.width * 10%;
+                    mode: "decrement";
+                    key-pressed(mode) => {
+                        temp -= 1;
+                        changed();
+                    }
+                }
+            }  
+            VerticalLayout {
+                alignment: center;
+                TempDisplay {
+                    auto-pilot-display: auto-pilot-display;
+                    width: root.width * 33%;
+                    temp: temp;
+                    clicked() => {
+                        root.show-auto = true;
+                    }
+                }
+            }
+            VerticalLayout {
+                visible: !sleep;
+                alignment: center;
+                TempControl {
+                    width: root.width * 10%;
+                    mode: "increment";
+                    key-pressed(mode) => {
+                        temp += 1;
+                        changed();
+                    }
+                }       
+            }
+        }
+    }
+
+    Rectangle {
+        visible: !sleep;
+        y: parent.height*0.7;
+        height: parent.height*0.3;
+        HorizontalBox {
+            TempReadingDisplay { location: "outside"; temp: 90;}
+            TempReadingDisplay { location: "living room"; temp: 76;}
+            TempReadingDisplay { location: "florida room"; temp: 79;}
+            TempReadingDisplay { location: "guest room"; temp: 79;}
+        }
+    }
+ }
+
+// Rectangle {
+//     height: ac-enabled? parent.height*0.75: 0;
+//     ac := ACControl {
+//         x: ac-enabled? 0: root.width + 1px;
+//     }
+// }
+export component ACControl inherits Rectangle {
+    in property <bool> sleep;
+    in-out property <int> temp: 42;
+    in-out property <AutoPilotSetting> auto-pilot-settings <=> auto.auto-pilot-settings;
+    in-out property <bool> show-auto <=> temp.show-auto;
+    animate x { duration: 200ms; easing: ease-in-out; }
+
+    function snooze-to-display(mins: int) -> string {
+        if (mins < 60) {
+            return mins + " m";
+        } 
+        return round(mins / 60) + "h";
+    }
+
+    function auto-pilot-display(mode: AutoPilotMode, mins: int) -> string {
+        if (mode == AutoPilotMode.On) {
+            return "Auto Pilot";
+        }
+        if (mode == AutoPilotMode.Off) {
+            return "Manual Mode";
+        }
+        return "Auto in " + snooze-to-display(mins);
+    }
+    temp := TempSettings {
+        auto-pilot-display: auto-pilot-display(auto-pilot-settings.mode, auto-pilot-settings.snooze-minutes); 
+        temp: root.temp; 
+        visible: !show-auto;
+        sleep: sleep;
+        changed => {
+            if(root.auto-pilot-settings.mode == AutoPilotMode.On) {
+                root.auto-pilot-settings.mode = AutoPilotMode.Snooze;
+                root.auto-pilot-settings.snooze-minutes = 120;
+            }
+        }
+    }
+
+    auto := AutoPilotSettings { visible: show-auto; 
+        auto-pilot-display: auto-pilot-display(auto-pilot-settings.mode, auto-pilot-settings.snooze-minutes);
+        back() => {
+            root.show-auto = false;
+            debug(auto-pilot-settings);
+        }
+    }
+}
