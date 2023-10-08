@@ -5,6 +5,10 @@ export struct AutoPilotSetting {
     mode: AutoPilotMode,
     snooze-minutes: int,
 }
+export struct TempSensorData {
+    sensor_name: string,
+    sensor_value: int,
+}
 
 component TempDisplay inherits Rectangle {
     in property <int> temp;
@@ -69,20 +73,19 @@ component TempControl inherits Rectangle {
     }
 }
 
-export component TempReadingDisplay inherits VerticalBox {
-    in property <string> location;
-    in property <int> temp;
+export component TempSensorDisplay inherits VerticalBox {
+    in property <TempSensorData> data;
     alignment: center;
     Text {
         horizontal-alignment: center;
         color: white;
-        text: location;
-        font-size: 1.5rem;
+        text: data.sensor-name;
+        font-size: 1.2rem;
     }
     Text {
         horizontal-alignment: center;
         color: white;
-        text: temp + "°";
+        text: data.sensor-value + "°";
         font-size: 1.5rem;
     }
  }
@@ -231,21 +234,23 @@ export component TempReadingDisplay inherits VerticalBox {
 
  export component TempSettings inherits Rectangle {
     callback changed();
+    in property <[TempSensorData]> temp_sensors;
     in property <string> auto-pilot-display;
     in property <bool> sleep;
     in-out property <int> temp;
     in-out property <bool> show-auto;
+    in-out property <int> name;
     Rectangle {
         y:0;
         height: parent.height*0.7;
         HorizontalBox {
             alignment: center;
-            spacing: self.width*0.15;
+            spacing: self.width*0.1;
             VerticalLayout {
                 visible: !sleep;
                 alignment: center;
                 TempControl { 
-                    width: root.width * 10%;
+                    width: root.width * 20%;
                     mode: "decrement";
                     key-pressed(mode) => {
                         temp -= 1;
@@ -268,7 +273,7 @@ export component TempReadingDisplay inherits VerticalBox {
                 visible: !sleep;
                 alignment: center;
                 TempControl {
-                    width: root.width * 10%;
+                    width: root.width * 20%;
                     mode: "increment";
                     key-pressed(mode) => {
                         temp += 1;
@@ -284,21 +289,16 @@ export component TempReadingDisplay inherits VerticalBox {
         y: parent.height*0.7;
         height: parent.height*0.3;
         HorizontalBox {
-            TempReadingDisplay { location: "outside"; temp: 90;}
-            TempReadingDisplay { location: "living room"; temp: 76;}
-            TempReadingDisplay { location: "florida room"; temp: 79;}
-            TempReadingDisplay { location: "guest room"; temp: 79;}
+            for sensor[i] in temp_sensors : TempSensorDisplay {
+                data: sensor;
+            }
         }
     }
  }
 
-// Rectangle {
-//     height: ac-enabled? parent.height*0.75: 0;
-//     ac := ACControl {
-//         x: ac-enabled? 0: root.width + 1px;
-//     }
-// }
+
 export component ACControl inherits Rectangle {
+    in property <[TempSensorData]> temp-sensors;
     in property <bool> sleep;
     in-out property <int> temp: 42;
     in-out property <AutoPilotSetting> auto-pilot-settings <=> auto.auto-pilot-settings;
@@ -322,6 +322,7 @@ export component ACControl inherits Rectangle {
         return "Auto in " + snooze-to-display(mins);
     }
     temp := TempSettings {
+        temp-sensors: temp-sensors;
         auto-pilot-display: auto-pilot-display(auto-pilot-settings.mode, auto-pilot-settings.snooze-minutes); 
         temp: root.temp; 
         visible: !show-auto;

@@ -1,13 +1,17 @@
 import {VerticalBox , HorizontalBox, Slider} from "std-widgets.slint";
 import {NavBar} from "./navbar.slint";
 import {Keypad} from "./keypad.slint";
-import {ACControl} from "./ac.slint";
+import {ACControl, TempSensorData} from "./ac.slint";
 import { Settings } from "settings.slint";
+
+
+
 
 export component AppWindow inherits Window {
     preferred-width: 480px;
     preferred-height: 320px;
     background: black;
+    in-out property <[TempSensorData]> temp-sensors <=> ac.temp-sensors;
     in-out property<int> temp <=> ac.temp;
     out property <bool> ac-enabled <=> nav.ac-enabled;
     out property <bool> show-auto-pilot-settings <=> ac.show-auto;
