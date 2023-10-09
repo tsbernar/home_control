@@ -16,7 +16,7 @@ export component AppWindow inherits Window {
     out property <bool> ac-enabled <=> nav.ac-enabled;
     out property <bool> show-auto-pilot-settings <=> ac.show-auto;
     out property <bool> settings-enabled <=> nav.settings-enabled;
-    callback request-increase-value();
+    callback change-temp(int) -> bool;
     in-out property <bool> sleep: true;
 
     
@@ -42,7 +42,11 @@ export component AppWindow inherits Window {
             Rectangle {
                 keypad := Keypad {x: (!ac-enabled && !sleep)? 0 : self.width + 1px;}
                 settings := Settings {x: (settings-enabled && !sleep)? 0 : self.width + 10px;}
-                ac := ACControl {x: (ac-enabled || sleep)? 0 : - self.width - 1px; sleep: sleep;}
+                ac := ACControl {
+                    x: (ac-enabled || sleep)? 0 : - self.width - 1px; 
+                    sleep: sleep;
+                    change-temp(value) => {root.change_temp(value);}
+                }
             }
     }
 

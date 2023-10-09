@@ -3,13 +3,15 @@ use crate::Config;
 use crate::TempSensorData;
 use log::{error, info};
 use reqwest::blocking::Client;
-use serde::{de, Deserialize, Deserializer};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
-use std::{collections::HashMap, future::Future, hash::Hash};
+use std::collections::HashMap;
+use std::fmt::Debug;
 
 const STATE_ENDPOINT: &str = "states";
+const SET_TEMP_ENDPOINT: &str = "states";
 
-pub(crate) fn setup_poller(config: Config) -> Result<Poller, HomeError> {
+pub(crate) fn setup_poller(config: &Config) -> Result<Poller, HomeError> {
     info!("Starting rest polling");
 
     let mut temp_sensors = HashMap::new();
@@ -26,7 +28,7 @@ pub(crate) fn setup_poller(config: Config) -> Result<Poller, HomeError> {
         humidity: HashMap::new(),
         client: client,
         base_url: config.ha_rest_url.to_owned(),
-        ha_api_token: config.ha_api_token.unwrap(),
+        ha_api_token: config.ha_api_token.as_ref().unwrap().to_owned(),
     };
 
     poller.poll();
@@ -34,34 +36,68 @@ pub(crate) fn setup_poller(config: Config) -> Result<Poller, HomeError> {
     Ok(poller)
 }
 
-pub(crate) struct Poller {
-    temp_sensors: HashMap<&'static str, &'static str>,
-    temps: HashMap<String, f32>,
-    #[allow(dead_code)] // TODO
-    humidity: HashMap<String, f32>,
+pub(crate) struct Setter {
     client: Client,
     base_url: String,
+    thermostat_ha_entity_id: String,
     ha_api_token: String,
 }
 
-// Expected Response looks like this:
-// {
-//     "entity_id": "sensor.bedroom_temperature",
-//     "state": "76.460011",
-//     "attributes": {
-//       "state_class": "measurement",
-//       "unit_of_measurement": "°F",
-//       "device_class": "temperature",
-//       "friendly_name": "Bedroom Temperature"
-//     },
-//     "last_changed": "2023-10-04T23:26:20.445431+00:00",
-//     "last_updated": "2023-10-04T23:26:20.445431+00:00",
-//     "context": {
-//       "id": "01HBYG70RXBVG4H7S1XW3GZSBT",
-//       "parent_id": null,
-//       "user_id": null
-//     }
-//   }
+#[derive(Serialize, Debug)]
+struct SetTempData<T> {
+    state: T,
+}
+
+impl Setter {
+    pub fn new(config: &Config) -> Setter {
+        Setter {
+            client: Client::new(),
+            base_url: config.ha_rest_url.to_owned(),
+            thermostat_ha_entity_id: config.thermostat_ha_entity_id.to_owned(),
+            ha_api_token: config.ha_api_token.as_ref().unwrap().to_owned(),
+        }
+    }
+
+    pub fn set<T: Serialize + Debug + Clone>(&self, value: T) -> Result<u32, HomeError> {
+        let url = format!(
+            "{base_url}/{SET_TEMP_ENDPOINT}/{entity_id}",
+            base_url = self.base_url,
+            entity_id = self.thermostat_ha_entity_id
+        );
+
+        info!("{:?}", url);
+        info!("{:?}", SetTempData { state: value.clone() });
+
+        let response = self
+            .client
+            .post(url)
+            .header("Authorization", format!("Bearer {}", self.ha_api_token))
+            .json(&SetTempData { state: value })
+            .send()
+            .unwrap(); // TODO
+
+        info!("Response: {:?}", response);
+
+        if response.status() != reqwest::StatusCode::OK {
+            error!("Unexpected status code when setting temp state {:?}", response);
+            Err(HomeError::ApiError(format!(
+                "Unexpected status code when setting temp state {:?}",
+                response
+            )))?;
+        }
+
+        match response.json::<EntityStateResponse>() {
+            Ok(entity_state_response) => {
+                info!("Set sensor state: {entity_state_response:#?}");
+                Ok(entity_state_response.state.round() as u32)
+            }
+            Err(e) => Err(HomeError::ApiError(format!(
+                "Couldn't deserialize body as json {:?}",
+                e
+            ))),
+        }
+    }
+}
 
 #[allow(dead_code)] // Want to capture the actual response, this is fine
 #[derive(Deserialize, Debug)]
@@ -81,6 +117,16 @@ fn to_float<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f32, D::Error>
         Value::Number(num) => num.as_f64().ok_or(de::Error::custom("Invalid number"))? as f32,
         _ => return Err(de::Error::custom("wrong type")),
     })
+}
+
+pub(crate) struct Poller {
+    temp_sensors: HashMap<&'static str, &'static str>,
+    temps: HashMap<String, f32>,
+    #[allow(dead_code)] // TODO
+    humidity: HashMap<String, f32>,
+    client: Client,
+    base_url: String,
+    ha_api_token: String,
 }
 
 impl Poller {

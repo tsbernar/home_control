@@ -4,4 +4,6 @@ use thiserror::Error;
 pub enum HomeError {
     #[error("Error serializing or deserializing, `{0}`")]
     SerdeError(#[from] serde_json::Error),
+    #[error("API Error `{0}`")]
+    ApiError(String),
 }

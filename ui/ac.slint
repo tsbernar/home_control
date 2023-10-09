@@ -233,7 +233,7 @@ export component TempSensorDisplay inherits VerticalBox {
  }
 
  export component TempSettings inherits Rectangle {
-    callback changed();
+    callback changed(int);
     in property <[TempSensorData]> temp_sensors;
     in property <string> auto-pilot-display;
     in property <bool> sleep;
@@ -254,7 +254,7 @@ export component TempSensorDisplay inherits VerticalBox {
                     mode: "decrement";
                     key-pressed(mode) => {
                         temp -= 1;
-                        changed();
+                        changed(temp);
                     }
                 }
             }  
@@ -277,7 +277,7 @@ export component TempSensorDisplay inherits VerticalBox {
                     mode: "increment";
                     key-pressed(mode) => {
                         temp += 1;
-                        changed();
+                        changed(temp);
                     }
                 }       
             }
@@ -303,6 +303,7 @@ export component ACControl inherits Rectangle {
     in-out property <int> temp: 42;
     in-out property <AutoPilotSetting> auto-pilot-settings <=> auto.auto-pilot-settings;
     in-out property <bool> show-auto <=> temp.show-auto;
+    callback change-temp(int) -> bool;
     animate x { duration: 200ms; easing: ease-in-out; }
 
     function snooze-to-display(mins: int) -> string {
@@ -327,11 +328,12 @@ export component ACControl inherits Rectangle {
         temp: root.temp; 
         visible: !show-auto;
         sleep: sleep;
-        changed => {
+        changed(temp) => {
             if(root.auto-pilot-settings.mode == AutoPilotMode.On) {
                 root.auto-pilot-settings.mode = AutoPilotMode.Snooze;
                 root.auto-pilot-settings.snooze-minutes = 120;
             }
+            root.change-temp(temp)
         }
     }
 

@@ -1,5 +1,7 @@
 ha_ws_url: ws://192.168.1.71:8123/api/websocket
+thermostat_ha_entity_id: input_number.thermostat_temp
 ha_rest_url: http://192.168.1.71:8123/api
+sensor_refresh_interval_s: 30
 #ha_url: wss://home.trevorandcameron.com/api/websocket
 ws_reconnect_min_interval_ms: 100
 ws_reconnect_max_interval_ms: 60000
